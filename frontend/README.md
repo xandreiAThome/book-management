@@ -1,32 +1,32 @@
-# React + TypeScript + Vite
+# Simple Books Management Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+## Tech Stack
+- React + TypeScript (Vite)
+- TanStack Query (Server state management)
+- React Router (Routing & Guards)
+- shadcn/ui + Tailwind CSS (Component Layer)
+- Axios (HTTP Client)
+- react-hook-form + zod (Forms and Validation)
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+2. **Environment Variables**
+   Create a `.env` file in the root directory (optional, currently hardcoded to `http://localhost:3000` in `src/lib/api.ts` for simplicity). If configuring via env:
+   ```env
+   VITE_API_BASE_URL=http://localhost:3000
+   ```
+3. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
-## React Compiler
+## MVVM Architecture Layer Mapping
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+This project strictly adheres to the Model-View-ViewModel (MVVM) design pattern, separated logically across the directory structure:
+- **Model (`src/models/` & `src/lib/api.ts`)**: Defines the core domain types (TypeScript interfaces) and data-fetching logic (Axios functions). It acts as the ultimate source of truth for the application's backend interaction.
+- **ViewModel (`src/viewmodels/`)**: Utilizes TanStack Query hooks (`useQuery` and `useMutation`) to bridge the Model and View. It encapsulates server state management, caching, invalidation, and exposes data and actions to the View in a reactive manner without bleeding HTTP concerns into components.
+- **View (`src/pages/` & `src/components/`)**: Comprises the presentational layer built primarily with `shadcn/ui` and Tailwind. The View components are completely decoupled from network calls and strictly consume state and actions exposed by the ViewModel hooks (e.g., displaying `isLoading` or `error` states directly from TanStack Query).
