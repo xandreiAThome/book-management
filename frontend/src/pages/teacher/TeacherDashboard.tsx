@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import type { Book } from '../../models/types';
 import { MoreHorizontal } from 'lucide-react';
+import { getImageUrl } from '../../lib/utils';
 
 export function TeacherDashboard() {
   const { data: books, isLoading, error } = useBooks();
@@ -27,34 +28,43 @@ export function TeacherDashboard() {
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [bookForm, setBookForm] = useState({ title: '', description: '', coverImg: '' });
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigningBookId, setAssigningBookId] = useState<string | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
   const [viewStudentsBook, setViewStudentsBook] = useState<Book | null>(null);
 
   const openCreate = () => {
     setEditingBook(null);
     setBookForm({ title: '', description: '', coverImg: '' });
+    setCoverImageFile(null);
     setIsBookModalOpen(true);
   };
 
   const openEdit = (book: Book) => {
     setEditingBook(book);
     setBookForm({ title: book.title, description: book.description || '', coverImg: book.coverImg || '' });
+    setCoverImageFile(null);
     setIsBookModalOpen(true);
   };
 
   const saveBook = () => {
     if (!bookForm.title) return toast.error('Title is required');
+
+    const formData = new FormData();
+    formData.append('title', bookForm.title);
+    if (bookForm.description) formData.append('description', bookForm.description);
+    if (coverImageFile) formData.append('coverImage', coverImageFile);
+
     if (editingBook) {
-      updateBook({ id: editingBook.id, data: bookForm }, {
+      updateBook({ id: editingBook.id, data: formData }, {
         onSuccess: () => { toast.success('Book updated'); setIsBookModalOpen(false); },
         onError: () => toast.error('Failed to update book'),
       });
     } else {
-      createBook(bookForm, {
+      createBook(formData, {
         onSuccess: () => { toast.success('Book created'); setIsBookModalOpen(false); },
         onError: () => toast.error('Failed to create book'),
       });
@@ -70,17 +80,17 @@ export function TeacherDashboard() {
     }
   };
 
-  const openAssign = (bookId: string) => {
-    setAssigningBookId(bookId);
-    setSelectedStudentId('');
+  const openAssign = (book: Book) => {
+    setAssigningBookId(book.id);
+    setSelectedStudentIds(book.assignments?.map(a => a.studentId) || []);
     setAssignModalOpen(true);
   };
 
   const handleAssign = () => {
-    if (!assigningBookId || !selectedStudentId) return toast.error('Select a student');
-    assignBook({ bookId: assigningBookId, studentId: selectedStudentId }, {
-      onSuccess: () => { toast.success('Book assigned successfully'); setAssignModalOpen(false); },
-      onError: (err: any) => toast.error(err.message || 'Failed to assign book'),
+    if (!assigningBookId) return;
+    assignBook({ bookId: assigningBookId, studentIds: selectedStudentIds }, {
+      onSuccess: () => { toast.success('Students assigned successfully'); setAssignModalOpen(false); },
+      onError: (err: any) => toast.error(err.message || 'Failed to assign students'),
     });
   };
 
@@ -108,7 +118,18 @@ export function TeacherDashboard() {
           <TableBody>
             {books?.map((book) => (
               <TableRow key={book.id}>
-                <TableCell className="font-medium">{book.title}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center space-x-3">
+                    {book.coverImg && (
+                      <img 
+                        src={getImageUrl(book.coverImg)} 
+                        alt={book.title} 
+                        className="w-10 h-10 rounded-md object-cover border"
+                      />
+                    )}
+                    <span>{book.title}</span>
+                  </div>
+                </TableCell>
                 <TableCell>{book.description}</TableCell>
                 <TableCell>
                   {book.assignments?.length ? (
@@ -141,7 +162,7 @@ export function TeacherDashboard() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => openEdit(book)}>Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openAssign(book.id)}>Assign to Student</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openAssign(book)}>Assign to Student(s)</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDelete(book.id)} className="text-red-600">Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -172,8 +193,11 @@ export function TeacherDashboard() {
               <Input value={bookForm.description} onChange={e => setBookForm({ ...bookForm, description: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm font-medium">Cover Image URL</label>
-              <Input value={bookForm.coverImg} onChange={e => setBookForm({ ...bookForm, coverImg: e.target.value })} />
+              <label className="text-sm font-medium">Cover Image</label>
+              <Input type="file" accept="image/*" onChange={e => setCoverImageFile(e.target.files?.[0] || null)} />
+              {editingBook?.coverImg && !coverImageFile && (
+                <p className="text-xs text-gray-500 mt-1">Current image: {editingBook.coverImg}</p>
+              )}
             </div>
             <Button onClick={saveBook} className="w-full">{editingBook ? 'Update' : 'Create'}</Button>
           </div>
@@ -183,24 +207,28 @@ export function TeacherDashboard() {
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign Book to Student</DialogTitle>
+            <DialogTitle>Assign Students</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <Select onValueChange={setSelectedStudentId} value={selectedStudentId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a student">
-                  {selectedStudentId 
-                    ? students?.find(s => s.id === selectedStudentId)?.username 
-                    : "Select a student"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {students?.map(student => (
-                  <SelectItem key={student.id} value={student.id}>{student.username}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleAssign} className="w-full">Assign</Button>
+          <div className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto">
+            {students?.length === 0 && <p className="text-gray-500">No students available.</p>}
+            {students?.map(student => (
+              <label key={student.id} className="flex items-center space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  checked={selectedStudentIds.includes(student.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedStudentIds([...selectedStudentIds, student.id]);
+                    } else {
+                      setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.id));
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium flex-1">{student.username}</span>
+              </label>
+            ))}
+            <Button onClick={handleAssign} className="w-full mt-4">Save Assignments</Button>
           </div>
         </DialogContent>
       </Dialog>
