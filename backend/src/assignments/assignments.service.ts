@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AssignBookDto } from './dto/assign-book.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AssignmentsService {
@@ -29,16 +30,17 @@ export class AssignmentsService {
     }
 
     // Begin transaction to sync students
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Remove all existing assignments
       await tx.bookAssignment.deleteMany({
         where: { bookId, teacherId },
       });
 
       // Insert new ones
+
       if (studentIds.length > 0) {
         await tx.bookAssignment.createMany({
-          data: studentIds.map((studentId) => ({
+          data: studentIds.map((studentId: string) => ({
             bookId,
             studentId,
             teacherId,
