@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique @db.VarChar(50)
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  booksCreated        Book[]           @relation("BookCreator")
+  assignmentsMade      BookAssignment[] @relation("AssignedByTeacher")
+  assignmentsReceived  BookAssignment[] @relation("AssignedToStudent")
+
+  @@map("users")
+}
+
+
+model Book {
+  id          String   @id @default(uuid()) @db.Uuid
+  teacherId   String   @map("teacher_id") @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  coverImg    String?  @map("cover_img") @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  teacher     User             @relation("BookCreator", fields: [teacherId], references: [id], onDelete: Cascade)
+  assignments BookAssignment[]
+
+  @@map("books")
+}
+
+model BookAssignment {
+  id         String   @id @default(uuid()) @db.Uuid
+  bookId     String   @map("book_id") @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  teacherId  String   @map("teacher_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  book    Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  student User @relation("AssignedToStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User @relation("AssignedByTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, studentId], name: "unique_book_student_assignment")
+  @@map("book_assignments")
+}
