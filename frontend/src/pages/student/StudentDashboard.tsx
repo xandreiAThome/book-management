@@ -1,6 +1,7 @@
 import { useMyBooks } from '../../viewmodels/useMyBooks';
 import { NavBar } from '../../components/shared/NavBar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { getImageUrl } from '../../lib/utils';
 
 export function StudentDashboard() {
   const { data: assignments, isLoading, error } = useMyBooks();
@@ -20,7 +21,7 @@ export function StudentDashboard() {
               {assignment.book.coverImg && (
                 <div className="h-48 w-full bg-muted">
                   <img 
-                    src={assignment.book.coverImg} 
+                    src={getImageUrl(assignment.book.coverImg)} 
                     alt={assignment.book.title} 
                     className="w-full h-full object-cover"
                   />

@@ -17,7 +17,7 @@ export class AssignmentsService {
     assignBookDto: AssignBookDto,
     teacherId: string,
   ) {
-    const { studentId } = assignBookDto;
+    const { studentIds } = assignBookDto;
 
     // Validate book belongs to requesting teacher
     const book = await this.prisma.book.findUnique({ where: { id: bookId } });
@@ -30,32 +30,25 @@ export class AssignmentsService {
       );
     }
 
-    // Validate studentId refers to a user with role STUDENT
-    const student = await this.prisma.user.findUnique({
-      where: { id: studentId },
-    });
-    if (!student || student.role !== UserRole.STUDENT) {
-      throw new NotFoundException('Student not found or invalid role');
-    }
-
-    try {
-      return await this.prisma.bookAssignment.create({
-        data: {
-          bookId,
-          studentId,
-          teacherId,
-        },
+    // Begin transaction to sync students
+    return this.prisma.$transaction(async (tx) => {
+      // Remove all existing assignments
+      await tx.bookAssignment.deleteMany({
+        where: { bookId, teacherId }
       });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException(
-            'This book is already assigned to the given student',
-          );
-        }
+
+      // Insert new ones
+      if (studentIds.length > 0) {
+        await tx.bookAssignment.createMany({
+          data: studentIds.map(studentId => ({
+            bookId,
+            studentId,
+            teacherId
+          }))
+        });
       }
-      throw error;
-    }
+      return { success: true };
+    });
   }
 
   async getMyBooks(studentId: string) {

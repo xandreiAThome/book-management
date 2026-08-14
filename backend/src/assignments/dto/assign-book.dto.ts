@@ -1,7 +1,7 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsArray, ArrayNotEmpty, IsString } from 'class-validator';
 
 export class AssignBookDto {
-  @IsString()
-  @IsNotEmpty()
-  studentId: string;
+  @IsArray()
+  @IsString({ each: true })
+  studentIds: string[];
 }

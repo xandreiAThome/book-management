@@ -7,8 +7,15 @@ import { AssignmentsModule } from './assignments/assignments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads/',
+    }),
     PrismaModule,
     AuthModule,
     BooksModule,
