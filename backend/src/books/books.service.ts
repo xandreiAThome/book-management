@@ -23,6 +23,13 @@ export class BooksService {
   async findAllByTeacher(teacherId: string) {
     return this.prisma.book.findMany({
       where: { teacherId },
+      include: {
+        assignments: {
+          include: {
+            student: true
+          }
+        }
+      }
     });
   }
 
