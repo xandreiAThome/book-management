@@ -7,7 +7,12 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
@@ -18,6 +23,16 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 import type { ICurrentUser } from '../auth/interfaces/current-user.interface';
 
+const multerOptions = {
+  storage: diskStorage({
+    destination: './uploads',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+    },
+  }),
+};
+
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('books')
 export class BooksController {
@@ -25,10 +40,15 @@ export class BooksController {
 
   @Roles(UserRole.TEACHER)
   @Post()
+  @UseInterceptors(FileInterceptor('coverImage', multerOptions))
   create(
     @Body() createBookDto: CreateBookDto,
     @CurrentUser() user: ICurrentUser,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
+    if (file) {
+      createBookDto.coverImg = `/uploads/${file.filename}`;
+    }
     return this.booksService.create(createBookDto, user.id);
   }
 
@@ -46,11 +66,16 @@ export class BooksController {
 
   @Roles(UserRole.TEACHER)
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('coverImage', multerOptions))
   update(
     @Param('id') id: string,
     @Body() updateBookDto: UpdateBookDto,
     @CurrentUser() user: ICurrentUser,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
+    if (file) {
+      updateBookDto.coverImg = `/uploads/${file.filename}`;
+    }
     return this.booksService.update(id, updateBookDto, user.id);
   }
 
