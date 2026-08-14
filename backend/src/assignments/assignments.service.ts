@@ -2,11 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AssignBookDto } from './dto/assign-book.dto';
-import { Prisma, UserRole } from '@prisma/client';
 
 @Injectable()
 export class AssignmentsService {
@@ -34,17 +32,17 @@ export class AssignmentsService {
     return this.prisma.$transaction(async (tx) => {
       // Remove all existing assignments
       await tx.bookAssignment.deleteMany({
-        where: { bookId, teacherId }
+        where: { bookId, teacherId },
       });
 
       // Insert new ones
       if (studentIds.length > 0) {
         await tx.bookAssignment.createMany({
-          data: studentIds.map(studentId => ({
+          data: studentIds.map((studentId) => ({
             bookId,
             studentId,
-            teacherId
-          }))
+            teacherId,
+          })),
         });
       }
       return { success: true };

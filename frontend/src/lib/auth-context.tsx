@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(storedToken);
       try {
         setUser(JSON.parse(storedUser));
-      } catch (e) {
+      } catch (_e) {
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
       }

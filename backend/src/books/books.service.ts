@@ -26,10 +26,10 @@ export class BooksService {
       include: {
         assignments: {
           include: {
-            student: true
-          }
-        }
-      }
+            student: true,
+          },
+        },
+      },
     });
   }
 

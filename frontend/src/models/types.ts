@@ -18,7 +18,7 @@ export interface Book {
   description?: string; 
   coverImg?: string; 
   createdAt: string;
-  assignments?: { student: { username: string } }[];
+  assignments?: { studentId: string; student: User }[];
 }
 
 export interface BookAssignment {
